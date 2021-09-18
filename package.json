@@ -1,0 +1,16 @@
+{
+  "name": "@mjpitz/homestead",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Some tools to help with my homesteading.",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/mjpitz/homestead.git"
+  },
+  "author": "Mya Pitzeruse",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/mjpitz/homestead/issues"
+  },
+  "homepage": "https://github.com/mjpitz/homestead#readme"
+}
