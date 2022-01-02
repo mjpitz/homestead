@@ -84,7 +84,7 @@ type Weather struct {
 	RedFlagThreatIndex               float64   `json:"red_flag_threat_index"`
 }
 
-func (w *Weather) Type() string {
+func (w Weather) Type() string {
 	return "weather"
 }
 
@@ -256,13 +256,13 @@ func main() {
 
 				id := timestamp.Format(time.RFC3339) + "/" + observedAt.Format(time.RFC3339)
 
-				err = index.Index(id, doc)
+				err = index.Index(id, *doc)
 				if err != nil {
 					return err
 				}
 			}
 
-			return err
+			return nil
 		},
 		HideVersion:          true,
 		HideHelpCommand:      true,

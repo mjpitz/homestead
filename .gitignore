@@ -1,2 +1,4 @@
-config.json
-weather.bleve
+/dist/
+/indexes/
+
+/weather.json

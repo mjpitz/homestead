@@ -1,0 +1,8 @@
+{
+  "address": {
+    "street": "<REQUIRED>",
+    "city": "<REQUIRED>",
+    "state": "<REQUIRED>",
+    "zip": "<REQUIRED>"
+  }
+}

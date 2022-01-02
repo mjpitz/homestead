@@ -1,34 +1,12 @@
-Some tools to help with my homesteading. Since I'm based out of the US, I used open data APIs to develop this. 
+Some tools to help with my homesteading. Since I'm based out of the US, I used existing government APIs to develop this.
+I will likely augment some of this with my own measurements, but will initially use existing data.
 
-## Geocoding
+## Datasets
 
-The US Census provides a Geocoding API that takes a street address, a benchmark, and obtain geo-coordinates. We use the
-coordinates for various other API calls such as fetching the weather forecast and history data. 
+### weather
 
-- https://geocoding.geo.census.gov/geocoder/benchmarks
-  - ?format=json
-  - 4 = current range
-  - 2020 = census range
-  
-- https://geocoding.geo.census.gov/geocoder/locations/address
-  - ?format=json
-  - &street=
-  - &city=
-  - &state=
-  - &zip=
-  - &benchmark=2020
+The `weather-index-builder` creates/updates a [bleve][] index. Each document is a "reading" from the weather API broken 
+down into 15 minute segments. Each reading is marked with an `observed_at` time that allows for multiple readings to
+inform a measure for a window. For example, one might use an average, percentile, or combination of both to inform them.
 
-## Weather
-
-weather.gov provides an API, however you mush work with geo-coordinates. First we will need to obtain the `gridID`,
-`gridX`, and `gridY`. Then, once you get these pieces you can get forecasts for the area. You can also get station
-information too. Not sure if you can get raw data streams from stations directly.
-
-- https://www.weather.gov/documentation/services-web-api
-- https://api.weather.gov/points/{lat},{long}
-- https://api.weather.gov/gridpoints/{gridID}/{gridX},{gridY}
-- https://api.weather.gov/gridpoints/{gridID}/{gridX},{gridY}/forecast/hourly
-- https://api.weather.gov/gridpoints/{gridID}/{gridX},{girdY}/forecast
-- https://api.weather.gov/icons
-
-The gridpoints endpoint provides a significant amount of data. Forecasts seem to be built off their own models.
+[bleve]: http://blevesearch.com/docs/Home/
