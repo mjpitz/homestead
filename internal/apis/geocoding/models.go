@@ -8,10 +8,10 @@ type Benchmark struct {
 }
 
 type Address struct {
-	Street string `json:"street,omitempty"`
-	City   string `json:"city,omitempty"`
-	State  string `json:"state,omitempty"`
-	Zip    string `json:"zip,omitempty"`
+	Street string `json:"street" usage:"street address of the location to build an index for"`
+	City   string `json:"city"   usage:"city of the street address"`
+	State  string `json:"state"  usage:"state of the street address"`
+	Zip    string `json:"zip"    usage:"zip code of the street address"`
 }
 
 type Coordinates struct {

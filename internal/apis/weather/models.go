@@ -1,8 +1,12 @@
 package weather
 
+import (
+	"github.com/mjpitz/homestead/internal/iso8601"
+)
+
 type Measurement struct {
-	ValidTime string  `json:"validTime,omitempty"`
-	Value     float32 `json:"value,omitempty"`
+	ValidTime iso8601.Period `json:"validTime,omitempty"`
+	Value     float32        `json:"value,omitempty"`
 }
 
 type Elevation struct {
@@ -58,7 +62,6 @@ type GridpointProperties struct {
 	WindDirection                    *DataPoints `json:"windDirection,omitempty"`
 	WindSpeed                        *DataPoints `json:"windSpeed,omitempty"`
 	WindGust                         *DataPoints `json:"windGust,omitempty"`
-	Hazards                          *DataPoints `json:"hazards,omitempty"`
 	ProbabilityOfPrecipitation       *DataPoints `json:"probabilityOfPrecipitation,omitempty"`
 	QuantitativePrecipitation        *DataPoints `json:"quantitativePrecipitation,omitempty"`
 	IceAccumulation                  *DataPoints `json:"iceAccumulation,omitempty"`
