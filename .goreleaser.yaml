@@ -4,6 +4,16 @@ snapshot:
   name_template: "{{ .ShortCommit }}"
 
 builds:
+  - id: emquery
+    main: ./cmd/emquery/main.go
+    binary: emquery
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
   - id: weather-index-builder
     main: ./cmd/weather-index-builder/main.go
     binary: weather-index-builder
