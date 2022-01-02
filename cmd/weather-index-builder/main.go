@@ -233,11 +233,13 @@ func main() {
 
 			var index bleve.Index
 
-			exists, err := afero.Exists(vfs.Extract(ctx.Context), cfg.IndexPath)
+			afs := vfs.Extract(ctx.Context)
+			exists, err := afero.Exists(afs, cfg.IndexPath)
 			switch {
 			case exists:
 				index, err = bleve.Open(cfg.IndexPath)
 			case err == nil:
+				_ = afs.MkdirAll(cfg.IndexPath, 0755)
 				index, err = bleve.New(cfg.IndexPath, bleve.NewIndexMapping())
 			}
 

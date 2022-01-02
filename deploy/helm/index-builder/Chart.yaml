@@ -1,0 +1,6 @@
+apiVersion: v2
+name: index-builder
+description: Deploys one of my homestead index builders as a cronjob in kubernetes.
+type: application
+version: 0.0.0
+appVersion: latest
