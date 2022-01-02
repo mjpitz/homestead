@@ -9,7 +9,13 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 )
 
-require github.com/blevesearch/bleve/v2 v2.3.0
+require (
+	github.com/blevesearch/bleve/v2 v2.3.0
+	github.com/gorilla/mux v1.8.0
+	github.com/rs/cors v1.8.2
+	github.com/spf13/afero v1.6.0
+	golang.org/x/net v0.0.0-20211116231205-47ca1ff31462
+)
 
 require (
 	github.com/RoaringBitmap/roaring v0.9.4 // indirect
@@ -38,7 +44,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/spf13/afero v1.6.0 // indirect
 	github.com/steveyen/gtreap v0.1.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
