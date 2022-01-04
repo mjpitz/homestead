@@ -1,4 +1,6 @@
+/deploy/helm/**/Chart.lock
 /dist/
 /indexes/
 
+/emquery.yaml
 /weather.yaml
