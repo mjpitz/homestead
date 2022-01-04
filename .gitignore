@@ -1,3 +1,4 @@
+/deploy/helm/**/*.tgz
 /deploy/helm/**/Chart.lock
 /dist/
 /indexes/

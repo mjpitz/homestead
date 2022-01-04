@@ -51,6 +51,12 @@ func (c *Cache) Open(ctx context.Context, name string) (bleve.Index, error) {
 
 	var err error
 	index[name], err = c.loader(ctx, name)
+	if err != nil {
+		return nil, err
+	} else if index[name] == nil {
+		return nil, fmt.Errorf("failed to load index")
+	}
+
 	return index[name], err
 }
 
@@ -115,8 +121,9 @@ type Server struct {
 func (s *Server) Probe(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	_, err := s.cache.Open(r.Context(), vars["dataset"])
-	if err != nil {
+	ds, err := s.cache.Open(r.Context(), vars["dataset"])
+	if err != nil || ds == nil {
+		log.Println(err)
 		http.NotFound(w, r)
 	} else {
 		http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
@@ -127,6 +134,7 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dataset, err := s.cache.Open(r.Context(), vars["dataset"])
 	if err != nil {
+		log.Println(err)
 		http.NotFound(w, r)
 		return
 	}
@@ -164,6 +172,7 @@ func (s *Server) Query(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dataset, err := s.cache.Open(r.Context(), vars["dataset"])
 	if err != nil {
+		log.Println(err)
 		http.NotFound(w, r)
 		return
 	}
@@ -231,6 +240,7 @@ func (s *Server) TagKeys(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	dataset, err := s.cache.Open(r.Context(), vars["dataset"])
 	if err != nil {
+		log.Println(err)
 		http.NotFound(w, r)
 		return
 	}
@@ -299,7 +309,13 @@ func main() {
 		Action: func(ctx *cli.Context) error {
 			idx := &Server{
 				cache: newCache(func(ctx context.Context, name string) (bleve.Index, error) {
-					return bleve.Open(filepath.Join(cfg.DatasetBaseDir, name, "latest"))
+					path := filepath.Join(cfg.DatasetBaseDir, name, "latest")
+					cfg := map[string]interface{}{
+						"read_only": true,
+						"nosync":    true,
+					}
+
+					return bleve.OpenUsing(path, cfg)
 				}),
 			}
 
@@ -316,8 +332,8 @@ func main() {
 			handler := cors.Default().Handler(routes)
 			handler = h2c.NewHandler(handler, &http2.Server{})
 
-			zaputil.Extract(ctx.Context).Info("listening on :6060")
-			return http.ListenAndServe(":6060", handler)
+			zaputil.Extract(ctx.Context).Info("listening on :8080")
+			return http.ListenAndServe(":8080", handler)
 		},
 	}
 
