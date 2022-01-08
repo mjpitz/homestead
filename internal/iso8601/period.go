@@ -70,7 +70,7 @@ func ParseDuration(str string) (time.Duration, error) {
 		}
 	}
 
-	{
+	if len(parts) > 1 {
 		matches := matcher.FindAllSubmatch(parts[1], -1)
 
 		for _, match := range matches {

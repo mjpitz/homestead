@@ -3,5 +3,6 @@
 /dist/
 /indexes/
 
-/emquery.yaml
-/weather.yaml
+/secrets/emquery.yaml
+/secrets/weather.yaml
+/secrets/

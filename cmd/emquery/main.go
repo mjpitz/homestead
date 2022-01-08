@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -12,53 +12,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blevesearch/bleve/v2"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
+	"github.com/mjpitz/homestead/internal/index"
+	_ "github.com/mjpitz/homestead/internal/index"
 	"github.com/mjpitz/myago/flagset"
 	"github.com/mjpitz/myago/zaputil"
 )
-
-func newCache(loader func(ctx context.Context, name string) (bleve.Index, error)) *Cache {
-	cache := make(chan map[string]bleve.Index, 1)
-	cache <- make(map[string]bleve.Index)
-
-	return &Cache{
-		loader: loader,
-		cache:  cache,
-	}
-}
-
-type Cache struct {
-	loader func(ctx context.Context, name string) (bleve.Index, error)
-	cache  chan map[string]bleve.Index
-}
-
-func (c *Cache) Open(ctx context.Context, name string) (bleve.Index, error) {
-	index := <-c.cache
-	defer func() {
-		c.cache <- index
-	}()
-
-	existing, ok := index[name]
-	if ok && existing != nil {
-		return existing, nil
-	}
-
-	var err error
-	index[name], err = c.loader(ctx, name)
-	if err != nil {
-		return nil, err
-	} else if index[name] == nil {
-		return nil, fmt.Errorf("failed to load index")
-	}
-
-	return index[name], err
-}
 
 type Search struct {
 	Target string `json:"target"`
@@ -113,52 +77,46 @@ type TagKey struct {
 // Server provides a generic implementation of a JSON DataSource in Grafana. Data is backed by bleve search indexes. A
 // description of the spec can be found here: https://grafana.com/grafana/plugins/simpod-json-datasource/
 type Server struct {
-	cache *Cache
+	loader func(ctx context.Context, name string) (index.Index, error)
 }
 
 // Probe is called to ensure that datasource is working properly. We should conditionally return this based on the
 // presence of the requested dataset.
 func (s *Server) Probe(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-
-	ds, err := s.cache.Open(r.Context(), vars["dataset"])
-	if err != nil || ds == nil {
-		log.Println(err)
+	dataset, err := s.loader(r.Context(), vars["dataset"])
+	if err != nil {
 		http.NotFound(w, r)
-	} else {
-		http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
+		return
 	}
+	defer dataset.Close()
+
+	http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
 }
 
 func (s *Server) Search(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	dataset, err := s.cache.Open(r.Context(), vars["dataset"])
+	dataset, err := s.loader(r.Context(), vars["dataset"])
 	if err != nil {
-		log.Println(err)
 		http.NotFound(w, r)
 		return
 	}
+	defer dataset.Close()
 
 	q := &Search{}
 	err = json.NewDecoder(r.Body).Decode(q)
-	if err != nil {
+	if err != nil && err != io.EOF {
+		log.Println(err.Error())
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
 
-	fields, err := dataset.Fields()
-	if err != nil {
-		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
+	fields := dataset.Schema()
 
-	filtered := fields
-	if len(q.Target) > 0 {
-		filtered = make([]string, 0, len(fields))
-		for _, field := range fields {
-			if strings.Contains(field, q.Target) {
-				filtered = append(filtered, field)
-			}
+	filtered := make([]string, 0)
+	for _, field := range fields {
+		if len(q.Target) == 0 || strings.Contains(string(field.Text), q.Target) {
+			filtered = append(filtered, string(field.Text))
 		}
 	}
 
@@ -170,12 +128,12 @@ func (s *Server) Search(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) Query(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	dataset, err := s.cache.Open(r.Context(), vars["dataset"])
+	dataset, err := s.loader(r.Context(), vars["dataset"])
 	if err != nil {
-		log.Println(err)
 		http.NotFound(w, r)
 		return
 	}
+	defer dataset.Close()
 
 	q := &Query{}
 	err = json.NewDecoder(r.Body).Decode(q)
@@ -184,27 +142,21 @@ func (s *Server) Query(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	start := q.Range.From.Format(time.RFC3339)
-	end := q.Range.To.Format(time.RFC3339)
-
-	query := fmt.Sprintf(`timestamp:>="%s" timestamp:<"%s"`, start, end)
-
-	search := bleve.NewSearchRequestOptions(bleve.NewQueryStringQuery(query), 1<<16, 0, false)
-	search.SortBy([]string{"timestamp"})
-	search.Fields = append(search.Fields, "timestamp")
-
-	for _, target := range q.Targets {
-		switch target.Type {
-		case "timeserie":
-			search.Fields = append(search.Fields, target.Target)
-		}
+	query := []index.Query{
+		{"timestamp", ">=", q.Range.From.UnixMilli()},
+		{"timestamp", "<", q.Range.To.UnixMilli()},
 	}
 
-	res, err := dataset.SearchInContext(r.Context(), search)
-	if err != nil {
-		http.Error(w, "", http.StatusInternalServerError)
-		return
+	for _, filter := range q.AdhocFilters {
+		query = append(query, index.Query{
+			Field:    filter.Key,
+			Operator: filter.Operator,
+			Value:    filter.Value,
+		})
 	}
+
+	docs := dataset.Query(query...)
+	hits := dataset.Get(map[string]interface{}{}, docs...)
 
 	results := make([]interface{}, 0, len(q.Targets))
 	for _, target := range q.Targets {
@@ -214,15 +166,16 @@ func (s *Server) Query(w http.ResponseWriter, r *http.Request) {
 				Target: target.Target,
 			}
 
-			for _, hit := range res.Hits {
-				timestamp, _ := time.Parse(time.RFC3339, hit.Fields["timestamp"].(string))
-				val, ok := hit.Fields[target.Target].(float64)
+			for _, hit := range hits {
+				doc := *(hit.(*map[string]interface{}))
+
+				val, ok := doc[target.Target].(float64)
 				if !ok {
 					continue
 				}
 
 				ts.Datapoints = append(ts.Datapoints, []float32{
-					float32(val), float32(timestamp.UnixMilli()),
+					float32(val), float32(doc["timestamp"].(int64)),
 				})
 			}
 
@@ -238,48 +191,16 @@ func (s *Server) Query(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) TagKeys(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	dataset, err := s.cache.Open(r.Context(), vars["dataset"])
+	dataset, err := s.loader(r.Context(), vars["dataset"])
 	if err != nil {
-		log.Println(err)
 		http.NotFound(w, r)
 		return
 	}
+	defer dataset.Close()
 
-	fields, err := dataset.Fields()
-	if err != nil {
-		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
+	fields := dataset.Schema()
 
-	query := bleve.NewMatchAllQuery()
-	searchReq := bleve.NewSearchRequestOptions(query, 1, 0, false)
-	searchReq.SortBy([]string{"-timestamp"})
-	searchReq.Fields = []string{"*"}
-
-	res, err := dataset.SearchInContext(r.Context(), searchReq)
-	hit := res.Hits[0]
-
-	keys := make([]TagKey, len(fields))
-	for i, field := range fields {
-		kind := "string"
-
-		switch v := hit.Fields[field].(type) {
-		case string:
-			_, err = time.Parse(time.RFC3339, v)
-			if err == nil {
-				kind = "datetime"
-			}
-		case float64:
-			kind = "number"
-		}
-
-		keys[i] = TagKey{
-			Type: kind,
-			Text: field,
-		}
-	}
-
-	err = json.NewEncoder(w).Encode(keys)
+	err = json.NewEncoder(w).Encode(fields)
 	if err != nil {
 		http.Error(w, "", http.StatusInternalServerError)
 	}
@@ -308,15 +229,11 @@ func main() {
 		},
 		Action: func(ctx *cli.Context) error {
 			idx := &Server{
-				cache: newCache(func(ctx context.Context, name string) (bleve.Index, error) {
+				loader: func(ctx context.Context, name string) (index.Index, error) {
 					path := filepath.Join(cfg.DatasetBaseDir, name, "latest")
-					cfg := map[string]interface{}{
-						"read_only": true,
-						"nosync":    true,
-					}
 
-					return bleve.OpenUsing(path, cfg)
-				}),
+					return index.Open(path, true)
+				},
 			}
 
 			routes := mux.NewRouter()

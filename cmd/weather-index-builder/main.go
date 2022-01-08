@@ -8,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blevesearch/bleve/v2"
-	"github.com/blevesearch/bleve/v2/geo"
-	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/zap"
 
 	"github.com/mjpitz/homestead/internal/apis/geocoding"
 	"github.com/mjpitz/homestead/internal/apis/weather"
@@ -23,72 +21,65 @@ import (
 )
 
 type Weather struct {
-	Timestamp  time.Time `json:"timestamp"`
-	ObservedAt time.Time `json:"observed_at"`
+	Timestamp  int64 `json:"timestamp"`
+	ObservedAt int64 `json:"observed_at"`
 
-	Coordinates                      geo.Point `json:"coordinates"`
-	Elevation                        float64   `json:"elevation_m"`
-	Temperature                      float64   `json:"temperature_degc"`
-	Dewpoint                         float64   `json:"dewpoint_degc"`
-	MaxTemperature                   float64   `json:"max_temperature_degc"`
-	MinTemperature                   float64   `json:"min_temperature_degc"`
-	RelativeHumidity                 float64   `json:"relative_humidity_pct"`
-	ApparentTemperature              float64   `json:"apparent_temperature_degc"`
-	HeatIndex                        float64   `json:"heat_index_degc"`
-	WindChill                        float64   `json:"wind_chill_degc"`
-	SkyCover                         float64   `json:"sky_cover_pct"`
-	WindDirection                    float64   `json:"wind_direction"`
-	WindSpeed                        float64   `json:"wind_speed_kph"` // kilometers per hour
-	WindGust                         float64   `json:"wind_gust_kph"`  // kilometers per hour
-	ProbabilityOfPrecipitation       float64   `json:"precipitation_probability_pct"`
-	QuantitativePrecipitation        float64   `json:"precipitation_quantity_mm"`
-	IceAccumulation                  float64   `json:"ice_accumulation_mm"`
-	SnowfallAmount                   float64   `json:"snowfall_amount_mm"`
-	SnowLevel                        float64   `json:"snow_level"`
-	CeilingHeight                    float64   `json:"ceiling_height"`
-	Visibility                       float64   `json:"visibility"`
-	TransportWindSpeed               float64   `json:"transport_wind_speed_kph"`
-	TransportWindDirection           float64   `json:"transport_wind_direction"`
-	MixingHeight                     float64   `json:"mixing_height_m"`
-	HainesIndex                      float64   `json:"haines_index"`
-	LightningActivityLevel           float64   `json:"lightning_activity_level"`
-	TwentyFootWindSpeed              float64   `json:"twenty_foot_wind_speed_kph"`
-	TwentyFootWindDirection          float64   `json:"twenty_foot_wind_direction"`
-	WaveHeight                       float64   `json:"wave_height"`
-	WavePeriod                       float64   `json:"wave_period"`
-	PrimarySwellHeight               float64   `json:"primary_swell_height"`
-	PrimarySwellDirection            float64   `json:"primary_swell_direction"`
-	SecondarySwellHeight             float64   `json:"secondary_swell_height"`
-	SecondarySwellDirection          float64   `json:"secondary_swell_direction"`
-	WavePeriod2                      float64   `json:"wave_period_2"`
-	WindWaveHeight                   float64   `json:"wind_wave_height"`
-	DispersionIndex                  float64   `json:"dispersion_index"`
-	Pressure                         float64   `json:"pressure"`
-	ProbabilityOfTropicalStormWinds  float64   `json:"probability_of_tropical_storm_winds"`
-	ProbabilityOfHurricaneWinds      float64   `json:"probability_of_hurricane_winds"`
-	PotentialOf15mphWinds            float64   `json:"potential_of_15_mph_winds"`
-	PotentialOf25mphWinds            float64   `json:"potential_of_25_mph_winds"`
-	PotentialOf35mphWinds            float64   `json:"potential_of_35_mph_winds"`
-	PotentialOf45mphWinds            float64   `json:"potential_of_45_mph_winds"`
-	PotentialOf20mphWindGusts        float64   `json:"potential_of_20_mph_wind_gusts"`
-	PotentialOf30mphWindGusts        float64   `json:"potential_of_30_mph_wind_gusts"`
-	PotentialOf40mphWindGusts        float64   `json:"potential_of_40_mph_wind_gusts"`
-	PotentialOf50mphWindGusts        float64   `json:"potential_of_50_mph_wind_gusts"`
-	PotentialOf60mphWindGusts        float64   `json:"potential_of_60_mph_wind_gusts"`
-	GrasslandFireDangerIndex         float64   `json:"grassland_fire_danger_index"`
-	ProbabilityOfThunder             float64   `json:"probability_of_thunder"`
-	DavisStabilityIndex              float64   `json:"davis_stability_index"`
-	AtmosphericDispersionIndex       float64   `json:"atmospheric_dispersion_index"`
-	LowVisibilityOccurrenceRiskIndex float64   `json:"low_visibility_occurrence_risk_index"`
-	Stability                        float64   `json:"stability"`
-	RedFlagThreatIndex               float64   `json:"red_flag_threat_index"`
+	Elevation                        float64 `json:"elevation_m"`
+	Temperature                      float64 `json:"temperature_degc"`
+	Dewpoint                         float64 `json:"dewpoint_degc"`
+	MaxTemperature                   float64 `json:"max_temperature_degc"`
+	MinTemperature                   float64 `json:"min_temperature_degc"`
+	RelativeHumidity                 float64 `json:"relative_humidity_pct"`
+	ApparentTemperature              float64 `json:"apparent_temperature_degc"`
+	HeatIndex                        float64 `json:"heat_index_degc"`
+	WindChill                        float64 `json:"wind_chill_degc"`
+	SkyCover                         float64 `json:"sky_cover_pct"`
+	WindDirection                    float64 `json:"wind_direction"`
+	WindSpeed                        float64 `json:"wind_speed_kph"` // kilometers per hour
+	WindGust                         float64 `json:"wind_gust_kph"`  // kilometers per hour
+	ProbabilityOfPrecipitation       float64 `json:"precipitation_probability_pct"`
+	QuantitativePrecipitation        float64 `json:"precipitation_quantity_mm"`
+	IceAccumulation                  float64 `json:"ice_accumulation_mm"`
+	SnowfallAmount                   float64 `json:"snowfall_amount_mm"`
+	SnowLevel                        float64 `json:"snow_level"`
+	CeilingHeight                    float64 `json:"ceiling_height"`
+	Visibility                       float64 `json:"visibility"`
+	TransportWindSpeed               float64 `json:"transport_wind_speed_kph"`
+	TransportWindDirection           float64 `json:"transport_wind_direction"`
+	MixingHeight                     float64 `json:"mixing_height_m"`
+	HainesIndex                      float64 `json:"haines_index"`
+	LightningActivityLevel           float64 `json:"lightning_activity_level"`
+	TwentyFootWindSpeed              float64 `json:"twenty_foot_wind_speed_kph"`
+	TwentyFootWindDirection          float64 `json:"twenty_foot_wind_direction"`
+	WaveHeight                       float64 `json:"wave_height"`
+	WavePeriod                       float64 `json:"wave_period"`
+	PrimarySwellHeight               float64 `json:"primary_swell_height"`
+	PrimarySwellDirection            float64 `json:"primary_swell_direction"`
+	SecondarySwellHeight             float64 `json:"secondary_swell_height"`
+	SecondarySwellDirection          float64 `json:"secondary_swell_direction"`
+	WavePeriod2                      float64 `json:"wave_period_2"`
+	WindWaveHeight                   float64 `json:"wind_wave_height"`
+	DispersionIndex                  float64 `json:"dispersion_index"`
+	Pressure                         float64 `json:"pressure"`
+	ProbabilityOfTropicalStormWinds  float64 `json:"probability_of_tropical_storm_winds"`
+	ProbabilityOfHurricaneWinds      float64 `json:"probability_of_hurricane_winds"`
+	PotentialOf15mphWinds            float64 `json:"potential_of_15_mph_winds"`
+	PotentialOf25mphWinds            float64 `json:"potential_of_25_mph_winds"`
+	PotentialOf35mphWinds            float64 `json:"potential_of_35_mph_winds"`
+	PotentialOf45mphWinds            float64 `json:"potential_of_45_mph_winds"`
+	PotentialOf20mphWindGusts        float64 `json:"potential_of_20_mph_wind_gusts"`
+	PotentialOf30mphWindGusts        float64 `json:"potential_of_30_mph_wind_gusts"`
+	PotentialOf40mphWindGusts        float64 `json:"potential_of_40_mph_wind_gusts"`
+	PotentialOf50mphWindGusts        float64 `json:"potential_of_50_mph_wind_gusts"`
+	PotentialOf60mphWindGusts        float64 `json:"potential_of_60_mph_wind_gusts"`
+	GrasslandFireDangerIndex         float64 `json:"grassland_fire_danger_index"`
+	ProbabilityOfThunder             float64 `json:"probability_of_thunder"`
+	DavisStabilityIndex              float64 `json:"davis_stability_index"`
+	AtmosphericDispersionIndex       float64 `json:"atmospheric_dispersion_index"`
+	LowVisibilityOccurrenceRiskIndex float64 `json:"low_visibility_occurrence_risk_index"`
+	Stability                        float64 `json:"stability"`
+	RedFlagThreatIndex               float64 `json:"red_flag_threat_index"`
 }
-
-func (w Weather) Type() string {
-	return "weather"
-}
-
-var _ mapping.Classifier = &Weather{}
 
 type Config struct {
 	ConfigFile string            `json:"config_file" usage:"specify the location of a file containing the configuration"`
@@ -99,32 +90,33 @@ type Config struct {
 
 var docFrequency = 15 * time.Minute
 
-func update(idx map[time.Time]*Weather, points *weather.DataPoints, set func(w *Weather, value float64)) {
+func update(idx map[int64]*Weather, points *weather.DataPoints, set func(w *Weather, value float64)) {
 	for _, measure := range points.Values {
-		t := measure.ValidTime.Time
 		d := measure.ValidTime.Duration
+		t := measure.ValidTime.Time
+		millis := t.UnixMilli()
 
-		if _, ok := idx[t]; !ok {
-			idx[t] = &Weather{}
+		if _, ok := idx[millis]; !ok {
+			idx[millis] = &Weather{}
 		}
 
 		if d == 0 {
 			// no duration, single document
-			set(idx[t], float64(measure.Value))
+			set(idx[millis], float64(measure.Value))
 			return
 		}
 
 		// expand window
 
 		for d > 0 {
-			if _, ok := idx[t]; !ok {
-				idx[t] = &Weather{}
+			if _, ok := idx[millis]; !ok {
+				idx[millis] = &Weather{}
 			}
 
-			set(idx[t], float64(measure.Value))
+			set(idx[millis], float64(measure.Value))
 
-			t = t.Add(docFrequency)
 			d = d - docFrequency
+			t = t.Add(docFrequency)
 		}
 	}
 }
@@ -155,7 +147,7 @@ func main() {
 		},
 		Action: func(ctx *cli.Context) error {
 			builder := index.Builder{
-				Action: func(ctx context.Context, index bleve.Index) error {
+				Action: func(ctx context.Context, index index.Index) error {
 					geocodingAPI := geocoding.NewClient()
 					weatherAPI := weather.NewClient()
 
@@ -176,8 +168,9 @@ func main() {
 						return err
 					}
 
-					idx := make(map[time.Time]*Weather)
+					idx := make(map[int64]*Weather)
 
+					zaputil.Extract(ctx).Info("updating datapoints")
 					// the following block was code-generated from the following command
 					// cat ./internal/apis/weather/models.go | grep '*DataPoints' | awk '{print $1}' | xargs -I^ echo 'update(idx, gridpoints.^, func(w *Weather, v float64) { w.^ = v })' | pbcopy
 					update(idx, gridpoints.Temperature, func(w *Weather, v float64) { w.Temperature = v })
@@ -236,21 +229,20 @@ func main() {
 					update(idx, gridpoints.RedFlagThreatIndex, func(w *Weather, v float64) { w.RedFlagThreatIndex = v })
 
 					observedAt := clocks.Extract(ctx).Now()
+
+					docs := make([]interface{}, 0, len(idx))
 					for timestamp, doc := range idx {
 						doc.Timestamp = timestamp
-						doc.ObservedAt = observedAt
+						doc.ObservedAt = observedAt.UnixMilli()
 						doc.Elevation = float64(gridpoints.Elevation.Value)
-						doc.Coordinates.Lat = float64(coordinates.Y)
-						doc.Coordinates.Lon = float64(coordinates.X)
 
-						id := timestamp.Format(time.RFC3339) + "/" + observedAt.Format(time.RFC3339)
-
-						err = index.Index(id, *doc)
-						if err != nil {
-							return err
-						}
+						docs = append(docs, doc)
 					}
 
+					zaputil.Extract(ctx).Info("writing documents", zap.Int("num", len(docs)))
+					err = index.Index(docs...)
+
+					zaputil.Extract(ctx).Info("done")
 					return nil
 				},
 			}

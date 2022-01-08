@@ -3,8 +3,6 @@ package index
 import (
 	"context"
 
-	"github.com/blevesearch/bleve/v2"
-	"github.com/spf13/afero"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 
@@ -20,25 +18,18 @@ type Config struct {
 }
 
 type Builder struct {
-	Action func(ctx context.Context, index bleve.Index) error
+	Action func(ctx context.Context, index Index) error
 }
 
 func (b Builder) performAction(ctx context.Context, cfg Config) error {
-	var index bleve.Index
-
 	afs := vfs.Extract(ctx)
-	exists, err := afero.Exists(afs, cfg.Path)
-	switch {
-	case exists:
-		index, err = bleve.Open(cfg.Path)
-	case err == nil:
-		_ = afs.MkdirAll(cfg.Path, 0755)
-		index, err = bleve.New(cfg.Path, bleve.NewIndexMapping())
-	}
+	_ = afs.MkdirAll(cfg.Path, 0755)
 
+	index, err := Open(cfg.Path, false)
 	if err != nil {
 		return err
 	}
+
 	defer index.Close()
 
 	return b.Action(ctx, index)
