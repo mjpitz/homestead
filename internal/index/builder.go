@@ -41,7 +41,7 @@ func (b Builder) Run(ctx context.Context, cfg Config) error {
 	var agentAPI agentv1.AgentAPIClient
 
 	if cfg.Target != "" {
-		conn, err := grpc.Dial(cfg.Target, grpc.WithInsecure())
+		conn, err := grpc.Dial(cfg.Target, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			return err
 		}
