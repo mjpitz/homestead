@@ -2,6 +2,7 @@ package index
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
@@ -25,12 +26,10 @@ func (b Builder) performAction(ctx context.Context, cfg Config) error {
 	afs := vfs.Extract(ctx)
 	_ = afs.MkdirAll(cfg.Path, 0755)
 
-	index, err := Open(cfg.Path, false)
+	index, err := OpenSQLite(filepath.Join(cfg.Path, "db.sqlite"), false)
 	if err != nil {
 		return err
 	}
-
-	defer index.Close()
 
 	return b.Action(ctx, index)
 }

@@ -6,3 +6,5 @@
 /secrets/emquery.yaml
 /secrets/weather.yaml
 /secrets/
+
+/vendor/

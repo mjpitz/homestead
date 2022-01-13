@@ -2,13 +2,10 @@ SKAFFOLD_DEFAULT_REPO ?= ghcr.io/mjpitz
 CWD = $(shell pwd)
 VERSION ?= latest
 
-dist: .dist
-.dist:
-	goreleaser --snapshot --skip-publish --rm-dist
-
 docker: .docker
 .docker:
 	docker build . \
+		--platform linux/arm64 \
 		--tag $(SKAFFOLD_DEFAULT_REPO)/homestead:latest \
 		--tag $(SKAFFOLD_DEFAULT_REPO)/homestead:$(VERSION) \
 		--file ./deploy/docker/Dockerfile

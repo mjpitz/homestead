@@ -21,7 +21,7 @@ import (
 )
 
 type Weather struct {
-	Timestamp  int64 `json:"timestamp"`
+	Timestamp  int64 `json:"timestamp" gorm:"index"`
 	ObservedAt int64 `json:"observed_at"`
 
 	Elevation                        float64 `json:"elevation_m"`
