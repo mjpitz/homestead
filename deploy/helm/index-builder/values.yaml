@@ -4,13 +4,9 @@
 
 schedule: "@never"
 binary: ""
-tags: []
+endpoint: ""
 
 config: {}
-
-persistence:
-  storage: "1Gi"
-  storageClassName: ""
 
 image:
   repository: ghcr.io/mjpitz/homestead
@@ -61,11 +57,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-aetherfs:
-  image:
-    repository: "mjpitz/aetherfs"
-    pullPolicy: IfNotPresent
-    tag: "22.02-rc1"
-  securityContext: {}
-  resources: {}

@@ -14,6 +14,7 @@ import (
 	"github.com/mjpitz/homestead/internal/apis/geocoding"
 	"github.com/mjpitz/homestead/internal/apis/weather"
 	"github.com/mjpitz/homestead/internal/index"
+	"github.com/mjpitz/homestead/internal/index/postgres"
 	"github.com/mjpitz/myago/clocks"
 	"github.com/mjpitz/myago/config"
 	"github.com/mjpitz/myago/flagset"
@@ -21,8 +22,8 @@ import (
 )
 
 type Weather struct {
-	Timestamp  int64 `json:"timestamp" gorm:"index"`
-	ObservedAt int64 `json:"observed_at"`
+	Timestamp  time.Time `json:"timestamp" gorm:"index"`
+	ObservedAt time.Time `json:"observed_at"`
 
 	Elevation                        float64 `json:"elevation_m"`
 	Temperature                      float64 `json:"temperature_degc"`
@@ -81,6 +82,10 @@ type Weather struct {
 	RedFlagThreatIndex               float64 `json:"red_flag_threat_index"`
 }
 
+func (w Weather) TableName() string {
+	return "weather"
+}
+
 type Config struct {
 	ConfigFile string            `json:"config_file" usage:"specify the location of a file containing the configuration"`
 	Index      index.Config      `json:"index"`
@@ -97,7 +102,9 @@ func update(idx map[int64]*Weather, points *weather.DataPoints, set func(w *Weat
 		millis := t.UnixMilli()
 
 		if _, ok := idx[millis]; !ok {
-			idx[millis] = &Weather{}
+			idx[millis] = &Weather{
+				Timestamp: t,
+			}
 		}
 
 		if d == 0 {
@@ -109,8 +116,12 @@ func update(idx map[int64]*Weather, points *weather.DataPoints, set func(w *Weat
 		// expand window
 
 		for d > 0 {
+			millis := t.UnixMilli()
+
 			if _, ok := idx[millis]; !ok {
-				idx[millis] = &Weather{}
+				idx[millis] = &Weather{
+					Timestamp: t,
+				}
 			}
 
 			set(idx[millis], float64(measure.Value))
@@ -122,11 +133,7 @@ func update(idx map[int64]*Weather, points *weather.DataPoints, set func(w *Weat
 }
 
 func main() {
-	cfg := &Config{
-		Index: index.Config{
-			Tags: cli.NewStringSlice(),
-		},
-	}
+	cfg := &Config{}
 
 	app := &cli.App{
 		Name:      "weather-index-builder",
@@ -146,7 +153,7 @@ func main() {
 			return err
 		},
 		Action: func(ctx *cli.Context) error {
-			builder := index.Builder{
+			builder := postgres.Builder{
 				Action: func(ctx context.Context, index index.Index) error {
 					geocodingAPI := geocoding.NewClient()
 					weatherAPI := weather.NewClient()
@@ -231,9 +238,8 @@ func main() {
 					observedAt := clocks.Extract(ctx).Now()
 
 					docs := make([]interface{}, 0, len(idx))
-					for timestamp, doc := range idx {
-						doc.Timestamp = timestamp
-						doc.ObservedAt = observedAt.UnixMilli()
+					for _, doc := range idx {
+						doc.ObservedAt = observedAt
 						doc.Elevation = float64(gridpoints.Elevation.Value)
 
 						docs = append(docs, doc)

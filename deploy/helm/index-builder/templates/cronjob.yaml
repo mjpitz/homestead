@@ -22,9 +22,6 @@ spec:
             - name: config
               secret:
                 secretName: {{ include "index-builder.fullname" . }}-config
-            - name: index
-              persistentVolumeClaim:
-                claimName: {{ include "index-builder.fullname" . }}-index
           containers:
             - name: {{ .Chart.Name }}
               securityContext:
@@ -36,38 +33,13 @@ spec:
               env:
                 - name: CONFIG_FILE
                   value: /opt/homestead/conf/config.json
-                - name: INDEX_PATH
-                  value: /opt/homestead/lib/bleve
-                - name: INDEX_TARGET
-                  value: "localhost:8080"
-                - name: INDEX_TAGS
-                  value: {{ .Values.tags | join "," | quote }}
+                - name: INDEX_ENDPOINT
+                  value: {{ .Values.endpoint }}
               command:
                 - /opt/homestead/bin/{{ .Values.binary }}
               volumeMounts:
                 - mountPath: /opt/homestead/conf
                   name: config
-                - mountPath: /opt/homestead/lib
-                  name: index
-            - name: aetherfs
-              securityContext:
-                {{- toYaml .Values.aetherfs.securityContext | nindent 16 }}
-              image: "{{ .Values.aetherfs.image.repository }}:{{ .Values.aetherfs.image.tag }}"
-              imagePullPolicy: {{ .Values.aetherfs.image.pullPolicy }}
-              resources:
-                {{- toYaml .Values.aetherfs.resources | nindent 16 }}
-              env:
-                - name: AGENT_ENABLE
-                  value: "true"
-                - name: AGENT_SHUTDOWN_ENABLE
-                  value: "true"
-                - name: STORAGE_DRIVER
-                  value: none
-              args:
-                - run
-              volumeMounts:
-                - mountPath: /opt/homestead/lib
-                  name: index
           {{- with .Values.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}
