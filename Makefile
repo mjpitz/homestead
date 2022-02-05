@@ -22,3 +22,11 @@ docker/release:
 		--tag $(SKAFFOLD_DEFAULT_REPO)/homestead:$(VERSION) \
 		--file ./deploy/docker/Dockerfile \
 		--push
+
+deploy: .deploy
+.deploy:
+	helm upgrade --atomic --create-namespace -i \
+		weather-index-builder ./deploy/helm/index-builder \
+		-n homestead \
+		-f ./deploy/helm/index-builder/values-weather.yaml \
+		-f ./secrets/weather.yaml

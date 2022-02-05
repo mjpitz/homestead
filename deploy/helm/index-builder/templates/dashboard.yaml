@@ -1,0 +1,13 @@
+{{- if .Values.grafana.dashboard.json }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "index-builder.fullname" . }}-dashboard
+  labels:
+    {{- include "index-builder.labels" . | nindent 4 }}
+    {{ .Values.grafana.dashboard.label }}: "1"
+data:
+  {{ printf "%s.%s.json" (include "index-builder.fullname" .) .Release.Namespace | quote }}: |
+    {{ .Values.grafana.dashboard.json | nindent 4 }}
+{{- end }}
