@@ -1,19 +1,6 @@
 Some tools to help with my homesteading. Since I'm based out of the US, I used existing government APIs to develop this.
 I will likely augment some of this with my own measurements, but will initially use existing data.
 
-## Libraries
-
-### `internal/index`
-
-Create, update, and query inverted indexes in [badger][]. While this solution isn't as feature rich as something like
-[bleve][], it aims to provide the minimal functionality needed for analyzing data.
-
-## Service
-
-### emquery
-
-`emquery` provides a [Grafana][] [SimpleJSON][] implementation backed by data from `internal/index` datasets.
-
 ## Datasets
 
 ### weather
